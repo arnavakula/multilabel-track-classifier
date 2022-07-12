@@ -28,11 +28,8 @@ def main():
     genius_access_token = os.getenv('GENIUS_CLIENT_ACCESS_TOKEN')
     genius_header = {'Authorization': f'Bearer {genius_access_token}'}
 
-    #create dataframe to store track info
-    df = pd.DataFrame(columns=['TRACK', 'ARTISTS', 'RELEASE_DECADE', 'GENRE', 'LYRICS'])
-
-    #clear file and add columns
-    df.to_csv('songs.csv', index=False)
+    with open('songs.csv', 'w') as f:
+        f.write(', '.join(constants.COLUMNS))
 
     offset = 0
 
@@ -43,25 +40,83 @@ def main():
         print('song %i' %offset)
 
         try:
-            uri = saved_tracks['items'][0]['track']['uri']
+            song_id = saved_tracks['items'][0]['track']['id']
         except:
             print('COULD NOT GET SAVED TRACK FOR SONG %i' %offset)
             quit()
 
-        track_name = spot.track(uri)['name'] 
-        artist_names = []
+        track_name = spot.track(song_id)['name']     
+        album_artist = spot.track(song_id)['album']['artists'][0]['name'].lower()
 
-        id = ''
-        artist_name = ''
-        genre_words = set()
-        album_artist = spot.track(uri)['album']['artists'][0]['name'].lower()
+        #get search parameters
+        search_param = remove_punctuation(track_name).lower()
+        search_param = re.sub('feat.*', '', search_param)
+        search_param = re.sub('with.*', '', search_param)
+        search_param = re.sub('Remastered.*', '', search_param)
+        search_param = re.sub(' ', '-', (search_param + ' ' + album_artist))
+        
+        #format search url 
+        search_url = "http://api.genius.com/search?q='{}'".format(search_param)
 
-        #get genres
-        for artist in spot.track(uri)['artists']:
+        #send request
+        req = requests.get(search_url, headers=genius_header)
+        try:
+            url = req.json()['response']['hits'][0]['result']['url']
+            release_year = str(req.json()['response']['hits'][0]['result']['release_date_components']['year'])
+            release_decade = get_release_decade(release_year)
+            lyrics = get_lyrics(url)
+
+            #get genres
+            artist_names = []
+            genres = get_genres(spot, song_id, artist_names)
+
+            audio_features = spot.audio_features(song_id)
+
+            for g in genres:
+                temp = pd.DataFrame(index=range(1))
+
+                #id
+                temp['ID'] = song_id
+                temp['TRACK_NAME'] = track_name
+                temp['ARTISTS'] = str(artist_names)
+
+                #features
+                temp['LYRICS'] = lyrics
+                temp['DANCEABILITY'] = audio_features[0]['danceability']
+                temp['ENERGY'] = audio_features[0]['energy']
+                temp['KEY'] = audio_features[0]['key']
+                temp['LOUDNESS'] = audio_features[0]['loudness']
+                temp['MODE'] = audio_features[0]['mode']
+                temp['SPEECHINESS'] = audio_features[0]['speechiness']
+                temp['ACOUSTICNESS'] = audio_features[0]['acousticness']
+                temp['INSTRUMENTALNESS'] = audio_features[0]['instrumentalness']
+                temp['LIVENESS'] = audio_features[0]['liveness']
+                temp['VALENCE'] = audio_features[0]['valence']
+                temp['TEMPO'] = audio_features[0]['tempo']
+
+                #targets
+                temp['GENRE'] = g
+                temp['RELEASE_YEAR'] = release_year
+                temp['RELEASE_DECADE'] = release_decade
+
+                with open('songs.csv', 'a') as f:
+                   f.write(temp.to_csv(index=False, index_label=False, header=False))
+                
+
+        except Exception as e:
+            print()
+            print(repr(e))
+            print('COULDNT FIND FOR:', track_name, 'by:', artist_names)
+            print()
+        
+        offset += 1
+
+def get_genres(spot, song_id, artist_names):
+    genre_words = set()
+
+    for artist in spot.track(song_id)['artists']:
             id = artist['id']
-            artist_name = artist['name']
-
-            artist_names.append(artist_name)
+            artist_names.append(artist['name'])
             
             genres = ' '.join(spot.artist(id)['genres'])
 
@@ -73,44 +128,9 @@ def main():
             #get all unique genres
             for genre in counter.most_common(constants.GENRE_COUNT):
                 genre_words.add(genre[0])
+    
+    return  genre_words
 
-        #get search parameters
-        search_param = remove_punctuation(track_name).lower()
-        search_param = re.sub('feat.*', '', search_param)
-        search_param = re.sub(' ', '-', (search_param + ' ' + album_artist))
-        print(search_param)
-        
-        #format url
-        search_url = "http://api.genius.com/search?q='{}'".format(search_param)
-
-        #send request
-        req = requests.get(search_url, headers=genius_header)
-        try:
-            url = req.json()['response']['hits'][0]['result']['url']
-            release_decade = get_release_decade(str(req.json()['response']['hits'][0]['result']['release_date_components']['year']))
-            lyrics = get_lyrics(url)
-
-
-            for g in genre_words:
-                temp = pd.DataFrame(index=range(1), columns=['TRACK', 'ARTISTS', 'RELEASE_DECADE', 'GENRE', 'LYRICS'])
-                temp['TRACK'] = track_name
-                temp['ARTISTS'] = str(artist_names)
-                temp['LYRICS'] = lyrics
-                temp['GENRE'] = g
-                temp['RELEASE_DECADE'] = release_decade
-
-                with open('songs.csv', 'a') as f:
-                   f.write(temp.to_csv(index=False, index_label=False, header=False))
-                
-
-        except Exception as e:
-            print()
-            print(repr(e))
-            print(req.json())
-            print('COULDNT FIND FOR:', track_name, 'by:', artist_names)
-            print()
-        
-        offset += 1
 
 #scrape genius.com for lyrics and format them  
 def get_lyrics(url):
@@ -142,6 +162,7 @@ def remove_punctuation(str):
 
 def get_release_decade(year):
     return year[0:3] + '0s'
+
     
     
     
