@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import secrets
+
 __all__ = [
     "SpotifyClientCredentials",
     "SpotifyOAuth",
@@ -721,10 +723,7 @@ class SpotifyPKCE(SpotifyAuthBase):
         Reference:
         https://developer.spotify.com/documentation/general/guides/authorization-guide/#authorization-code-flow-with-proof-key-for-code-exchange-pkce
         """
-        # Range (33,96) is used to select between 44-128 base64 characters for the
-        # next operation. The range looks weird because base64 is 6 bytes
-        import random
-        length = random.randint(33, 96)
+        length = secrets.SystemRandom().randint(33, 96)
 
         # The seeded length generates between a 44 and 128 base64 characters encoded string
         try:

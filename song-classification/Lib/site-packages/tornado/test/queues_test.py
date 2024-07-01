@@ -12,12 +12,12 @@
 
 import asyncio
 from datetime import timedelta
-from random import random
 import unittest
 
 from tornado import gen, queues
 from tornado.gen import TimeoutError
 from tornado.testing import gen_test, AsyncTestCase
+import secrets
 
 
 class QueueBasicTest(AsyncTestCase):
@@ -328,7 +328,7 @@ class QueueJoinTest(AsyncTestCase):
                 item = yield q.get()
                 self.accumulator += item
                 q.task_done()
-                yield gen.sleep(random() * 0.01)
+                yield gen.sleep(secrets.SystemRandom().random() * 0.01)
 
         # Two coroutines share work.
         worker()

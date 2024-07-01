@@ -28,10 +28,10 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import random
 import sys
 import time
 import ssl
+import secrets
 
 if sys.version_info[0] > 2:
     from http.cookiejar import LWPCookieJar
@@ -127,7 +127,7 @@ def get_random_user_agent():
     :rtype: str
     :return: Random user agent string.
     """
-    return random.choice(user_agents_list)
+    return secrets.choice(user_agents_list)
 
 
 # Helper function to format the tbs parameter.
