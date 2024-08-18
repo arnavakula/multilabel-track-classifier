@@ -4,13 +4,13 @@ from collections import Counter
 
 import numpy as np
 import pandas as pd
-import requests
 import spotipy
 from bs4 import BeautifulSoup
 from googlesearch import search
 from spotipy.oauth2 import SpotifyOAuth
 
 import constants
+from security import safe_requests
 
 def main():
     print('started app!')
@@ -85,7 +85,7 @@ def main():
             
             try:
                 #scrape webpage and get lyrics
-                result = requests.get(url)
+                result = safe_requests.get(url)
                 soup = BeautifulSoup(result.content, 'html.parser')
                 result.close()
 
