@@ -85,7 +85,7 @@ def main():
             
             try:
                 #scrape webpage and get lyrics
-                result = requests.get(url)
+                result = requests.get(url, timeout=60)
                 soup = BeautifulSoup(result.content, 'html.parser')
                 result.close()
 
