@@ -3,6 +3,7 @@ import sys
 import os
 import site
 import subprocess
+from security import safe_command
 
 # locate the dirs based on where this script is - it may be either in the
 # source tree, or in an installed Python 'Scripts' tree.
@@ -20,7 +21,7 @@ def run_test(script, cmdline_extras):
     dirname, scriptname = os.path.split(script)
     # some tests prefer to be run from their directory.
     cmd = [sys.executable, "-u", scriptname] + cmdline_extras
-    result = subprocess.run(cmd, check=False, cwd=dirname)
+    result = safe_command.run(subprocess.run, cmd, check=False, cwd=dirname)
     print("*** Test script '%s' exited with %s" % (script, result.returncode))
     sys.stdout.flush()
     if result.returncode:
