@@ -5,13 +5,13 @@ import os
 
 import numpy as np
 import pandas as pd
-import requests
 import spotipy
 from bs4 import BeautifulSoup
 from googlesearch import search
 from spotipy.oauth2 import SpotifyOAuth
 
 import constants
+from security import safe_requests
 
 def main():
     print('started app!')
@@ -59,7 +59,7 @@ def main():
         search_url = "http://api.genius.com/search?q='{}'".format(search_param)
 
         #send request
-        req = requests.get(search_url, headers=genius_header)
+        req = safe_requests.get(search_url, headers=genius_header)
         try:
             url = req.json()['response']['hits'][0]['result']['url']
             release_year = str(req.json()['response']['hits'][0]['result']['release_date_components']['year'])
@@ -134,7 +134,7 @@ def get_genres(spot, song_id, artist_names):
 
 #scrape genius.com for lyrics and format them  
 def get_lyrics(url):
-    result = requests.get(url)
+    result = safe_requests.get(url)
     soup = BeautifulSoup(result.text, 'html.parser')        
 
     result.close()
